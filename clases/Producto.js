@@ -11,14 +11,15 @@ class Producto {
   //metodo para calcular el iva con un parametro
   calcularIVA(porcentajeIva) {
     const iva = this.precio * porcentajeIva;
-    return iva;
+    return iva.toFixed(2);
   }
 
   //metodo para mostrar info
   mostrarInfo() {
-    console.log(
-      `Producto: ${this.nombre}. Precio: ${this.precio}€. Stock: ${this.stock}. IVA: ${this.calcularIVA(0.21)}€`,
-    );
+    console.log(`Producto: ${this.nombre}.`);
+    console.log(`Precio: ${this.precio}€.`);
+    console.log(`Stock: ${this.stock}.`);
+    console.log(`IVA: ${this.calcularIVA(0.21)}€`);
   }
 }
 // exportamos la clase para que pueda ser usada en otros archivos
