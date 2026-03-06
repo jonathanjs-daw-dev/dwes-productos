@@ -1,0 +1,13 @@
+[
+  {
+    "nombre": "Libro 1",
+    "precio": 9.99,
+    "stock": 100
+  },
+  {
+    "nombre": "Libro 1",
+    "precio": 9.99,
+    "stock": 200,
+    "tamDescarga": 45.12
+  }
+]
