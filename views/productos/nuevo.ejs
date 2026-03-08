@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Nuevo producto</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Nuevo producto</h1>
+
+      <form action="/productos" method="POST">
+        <p>
+          <label for="nombre">Nombre:</label><br />
+          <input type="text" id="nombre" name="nombre" required />
+        </p>
+
+        <p>
+          <label for="precio">Precio (€):</label><br />
+          <input type="number" id="precio" name="precio" step="0.01" required />
+        </p>
+
+        <p>
+          <label for="stock">Stock:</label><br />
+          <input type="number" id="stock" name="stock" required />
+        </p>
+
+        <p>
+          <button type="submit">Guardar</button>
+          <a class="button" href="/productos">Volver al listado</a>
+        </p>
+      </form>
+    </div>
+  </body>
+</html>

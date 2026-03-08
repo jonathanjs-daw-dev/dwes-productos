@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Listado de productos</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Listado de productos</h1>
+
+    <p>
+      <a class="button" href="/productos/nuevo">Nuevo producto</a>
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Precio</th>
+          <th>Stock</th>
+          <th>Tipo</th>
+          <th>Tamaño descarga (MB)</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (productos.length === 0) { %>
+          <tr>
+            <td colspan="7">No hay productos aún.</td>
+          </tr>
+        <% } else { %>
+          <% productos.forEach(p => { %>
+            <tr>
+              <td><%= p.id %></td>
+              <td><%= p.nombre %></td>
+              <td><%= p.precio %></td>
+              <td><%= p.stock %></td>
+              <td><%= p.tipo %></td>
+              <td><%= p.tamano_descarga_mb || "-" %></td>
+              <td>
+                <a class="button" href="/productos/<%= p.id %>/editar">Editar</a>
+
+                <form action="/productos/<%= p.id %>/borrar" method="POST" style="display:inline;">
+                  <button type="submit" onclick="return confirm('¿Seguro que quieres borrar este producto?')">
+                    Borrar
+                  </button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

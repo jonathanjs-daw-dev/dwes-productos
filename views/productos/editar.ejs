@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Editar producto</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Editar producto</h1>
+
+    <form action="/productos/<%= producto.id %>/editar" method="POST">
+      <p>
+        <label for="nombre">Nombre:</label><br>
+        <input
+          type="text"
+          id="nombre"
+          name="nombre"
+          value="<%= producto.nombre %>"
+          required
+        >
+      </p>
+
+      <p>
+        <label for="precio">Precio (€):</label><br>
+        <input
+          type="number"
+          id="precio"
+          name="precio"
+          step="0.01"
+          value="<%= producto.precio %>"
+          required
+        >
+      </p>
+
+      <p>
+        <label for="stock">Stock:</label><br>
+        <input
+          type="number"
+          id="stock"
+          name="stock"
+          value="<%= producto.stock %>"
+          required
+        >
+      </p>
+
+      <p>
+        <strong>Tipo:</strong> <%= producto.tipo %>
+      </p>
+
+      <% if (producto.tamano_descarga_mb) { %>
+        <p>
+          <strong>Tamaño descarga (MB):</strong>
+          <%= producto.tamano_descarga_mb %>
+        </p>
+      <% } %>
+
+      <p>
+        <button type="submit">Guardar cambios</button>
+        <a class="button" href="/productos">↩ Cancelar</a>
+      </p>
+    </form>
+  </div>
+</body>
+</html>
