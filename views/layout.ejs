@@ -1,13 +1,24 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <title><%= title %></title>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || "Productos" %></title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
 
-    <!-- Vincular CSS -->
-    <link rel="stylesheet" href="/css/style.css" />
-  </head>
-  <body>
-    <div class="container"><%- body %></div>
-  </body>
+<body>
+  <div class="container">
+    <header style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;">
+      <h1 style="margin:0;">CASOP-S9</h1>
+      <nav style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a class="button" href="/productos">Productos</a>
+        <a class="button" href="/productos/nuevo">Nuevo</a>
+      </nav>
+    </header>
+    <main>
+      <%- body %>
+    </main>
+  </div>
+</body>
 </html>
