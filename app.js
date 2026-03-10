@@ -8,7 +8,8 @@ const layouts = require("express-ejs-layouts");
 // path: Módulo nativo de Node.js para trabajar con rutas de archivos y directorios
 const path = require("path");
 // ProductosDAO: Capa de acceso a datos que contiene las funciones para interactuar con la base de datos
-const pDAO = require("./model/ProductosDAO");
+// const pDAO = require("./model/ProductosDAO");
+const repo = require("./model/ProductosRepo");
 
 // ---------------------------
 // CONFIGURACIÓN INICIAL
@@ -56,7 +57,8 @@ app.get("/", (req, res) => {
 app.get("/productos", async (req, res) => {
   try {
     // Obtenemos todos los productos de la base de datos
-    const productos = await pDAO.obtenerTodos();
+    // const productos = await pDAO.obtenerTodos();
+    const productos = await repo.obtenerTodos();
     // Renderizamos la vista 'productos/lista.ejs' pasándole los datos
     res.render("productos/lista", { productos, title: "Listado de Productos" });
   } catch (err) {
@@ -82,7 +84,8 @@ app.post("/productos", async (req, res) => {
     // Creamos un objeto producto asegurándonos de que precio y stock sean números
     const producto = { nombre, precio: Number(precio), stock: Number(stock) };
     // Insertamos el producto en la base de datos
-    await pDAO.insertarProducto(producto);
+    // await pDAO.insertarProducto(producto);
+    await repo.insertarProducto(producto);
     // Redirigimos al listado de productos para ver el nuevo producto añadido
     res.redirect("/productos");
   } catch (error) {
@@ -98,7 +101,8 @@ app.get("/productos/:id/editar", async (req, res) => {
     // Extraemos el ID del producto desde los parámetros de la URL y lo convertimos a número
     const id = Number(req.params.id);
     // Consultamos la base de datos para obtener el producto con ese ID
-    const producto = await pDAO.obtenerProductoPorId(id);
+    // const producto = await pDAO.obtenerProductoPorId(id);
+    const producto = await repo.obtenerProductoPorId(id);
 
     // Si no existe el producto, devolvemos un error 404
     if (!producto) {
@@ -122,7 +126,8 @@ app.post("/productos/:id/editar", async (req, res) => {
     // Extraemos los nuevos datos del formulario
     const { nombre, precio, stock } = req.body;
     // Actualizamos el producto en la base de datos con los nuevos valores
-    await pDAO.actualizarProducto(id, {
+    // await pDAO.actualizarProducto(id, {
+    await repo.actualizarProducto(id, {
       nombre,
       precio: Number(precio),
       stock: Number(stock),
@@ -142,7 +147,8 @@ app.post("/productos/:id/borrar", async (req, res) => {
     // Obtenemos el ID del producto a eliminar
     const id = Number(req.params.id);
     // Eliminamos el producto de la base de datos
-    await pDAO.borrarProducto(id);
+    // await pDAO.borrarProducto(id);
+    await repo.borrarProducto(id);
     // Redirigimos al listado actualizado sin el producto eliminado
     res.redirect("/productos");
   } catch (error) {
