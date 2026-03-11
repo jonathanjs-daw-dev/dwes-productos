@@ -35,33 +35,93 @@ const adapter = new PrismaPg(pgPool);
 const prisma = new PrismaClient({ adapter });
 
 /**
- * FUNCIÓN AUXILIAR: normalizarProducto
+ * FUNCIÓN: insertarProducto
  *
- * Esta función es un "formateador" que convierte los datos que trae Prisma
- * a un formato que podamos usar fácilmente en JSON (para enviar al cliente).
- *
- * ¿Por qué existe? Prisma devuelve el precio como tipo "Decimal" (para precisión),
- * pero JSON no entiende ese tipo, así que lo convertimos a string.
- * También extraemos el primer producto digital si existe.
+ * Crea un nuevo producto FÍSICO en la base de datos.
+ * Recibe un objeto con nombre, precio y stock.
  */
-const normalizarProducto = (producto) => {
-  // Buscamos si hay productos digitales relacionados con este producto
-  // Si existen, tomamos el primero; si no, asignamos null
-  const primerDigital =
-    producto.productos_digitales && producto.productos_digitales.length > 0
-      ? producto.productos_digitales[0]
-      : null;
-
-  // Retornamos un objeto con los datos formateados y listos para JSON
+const insertarProducto = async (producto) => {
+  // Extraemos los datos del producto que queremos insertar
+  const { nombre, precio, stock } = producto;
+  // Usamos prisma.productos.create() para insertar un nuevo registro
+  // data: { ... } contiene los valores del nuevo producto
+  // tipo: "FISICO" especifica que es un producto físico (no digital)
+  // new Prisma.Decimal(precio) convierte el precio a tipo Decimal para precisión
+  const productoInsertado = await prisma.productos.create({
+    data: {
+      nombre,
+      precio: new Prisma.Decimal(precio),
+      stock: Number(stock),
+      tipo: "FISICO",
+    },
+  });
+  // Retornamos el producto insertado, normalizando el precio a string
+  // Añadimos tamano_descarga_mb: null para que el objeto tenga siempre la misma estructura
+  // (aunque sea un producto físico, el campo existe pero es null)
   return {
-    id: producto.id,
-    nombre: producto.nombre,
-    // Convertimos el Decimal de Prisma a string para que JSON lo entienda
-    precio: producto.precio.toString(),
-    stock: producto.stock,
-    tipo: producto.tipo,
-    // Si hay producto digital, incluimos su tamaño; si no, null
-    tamano_descarga_mb: primerDigital ? primerDigital.tamano_descarga_mb : null,
+    ...productoInsertado,
+    precio: productoInsertado.precio.toString(),
+    tamano_descarga_mb: null,
+  };
+};
+
+/**
+ * FUNCIÓN: insertarProductoDigital
+ *
+ * Crea un nuevo producto DIGITAL en la base de datos.
+ * Este es más complejo que insertarProducto porque crea dos registros:
+ * 1. Un registro en la tabla "productos"
+ * 2. Un registro relacionado en la tabla "productos_digitales"
+ */
+const insertarProductoDigital = async (productoDigital) => {
+  // Extraemos los datos del producto digital que queremos insertar
+  // Aceptamos AMBOS nombres: tamañoDescarga (con tilde) y tamanoDescarga (sin tilde)
+  // por si el formulario manda uno u otro
+  const { nombre, precio, stock, tamañoDescarga, tamanoDescarga } =
+    productoDigital;
+
+  // Usamos el operador ?? (nullish coalescing) para elegir cuál usar
+  // Si tamañoDescarga existe, lo usamos; si no, usamos tamanoDescarga
+  // Si ninguno existe, size será undefined
+  const size = tamañoDescarga ?? tamanoDescarga;
+
+  // Usamos prisma.productos.create() para insertar un nuevo producto
+  // Pero esta vez, además de los datos básicos, también creamos el registro relacionado
+  const productoDigitalInsertado = await prisma.productos.create({
+    data: {
+      nombre,
+      precio: new Prisma.Decimal(precio),
+      stock: Number(stock),
+      tipo: "DIGITAL", // Especificamos que es un producto digital
+      // productos_digitales: { create: {...} } crea un registro relacionado
+      // Nota: ahora es un objeto directo, no un array como antes
+      // Es como decir: "Crea este producto Y también crea su información digital"
+      productos_digitales: {
+        create: {
+          tamano_descarga_mb: Number(size),
+        },
+      },
+    },
+    // include: { productos_digitales: true } hace que Prisma retorne también
+    // los datos del producto digital que acabamos de crear
+    include: {
+      productos_digitales: true,
+    },
+  });
+
+  // Obtenemos el primer (y único) registro digital usando optional chaining ?.
+  // Si no existe, firstDigital será undefined
+  const firstDigital = productoDigitalInsertado.productos_digitales?.[0];
+
+  // Construimos manualmente el objeto de retorno con todos los campos normalizados
+  // Convertimos el precio a string y el tamaño a número
+  return {
+    id: productoDigitalInsertado.id,
+    nombre: productoDigitalInsertado.nombre,
+    precio: productoDigitalInsertado.precio.toString(),
+    stock: productoDigitalInsertado.stock,
+    tipo: productoDigitalInsertado.tipo,
+    tamano_descarga_mb: firstDigital ? firstDigital.tamano_descarga_mb : null,
   };
 };
 
@@ -79,9 +139,23 @@ const obtenerTodos = async () => {
     include: { productos_digitales: true },
     orderBy: { id: "asc" },
   });
-  // Normalizamos cada producto (convertimos Decimal a string, etc.)
-  // y retornamos el array de productos formateados
-  return productos.map(normalizarProducto);
+  // Mapeamos cada producto para normalizarlo
+  // En lugar de usar una función auxiliar, hacemos la transformación inline
+  return productos.map((producto) => {
+    // Usamos optional chaining ?. para acceder al primer producto digital
+    // Si no existe, firstDigital será undefined
+    const firstDigital = producto.productos_digitales?.[0];
+    // Retornamos un objeto con todos los campos normalizados
+    // Convertimos el precio a string y el tamaño a número (o null si no existe)
+    return {
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precio.toString(),
+      stock: producto.stock,
+      tipo: producto.tipo,
+      tamano_descarga_mb: firstDigital ? firstDigital.tamano_descarga_mb : null,
+    };
+  });
 };
 
 /**
@@ -100,8 +174,21 @@ const obtenerProductoPorId = async (id) => {
   });
   // Si no existe el producto, retornamos null
   if (!producto) return null;
-  // Si existe, lo normalizamos y lo retornamos
-  return normalizarProducto(producto);
+
+  // Usamos optional chaining ?. para acceder al primer producto digital
+  // Si no existe, firstDigital será undefined
+  const firstDigital = producto.productos_digitales?.[0];
+
+  // Construimos manualmente el objeto de retorno con todos los campos normalizados
+  // Convertimos el precio a string y el tamaño a número (o null si no existe)
+  return {
+    id: producto.id,
+    nombre: producto.nombre,
+    precio: producto.precio.toString(),
+    stock: producto.stock,
+    tipo: producto.tipo,
+    tamano_descarga_mb: firstDigital ? firstDigital.tamano_descarga_mb : null,
+  };
 };
 
 /**
@@ -134,28 +221,37 @@ const actualizarProducto = async (id, datos) => {
 };
 
 /**
- * FUNCIÓN: actualizarProductoDigitalPorProductoId
+ * FUNCIÓN: actualizarProductoDigital
  *
  * Actualiza el tamaño de descarga de un producto digital.
  * Busca por el ID del producto (no por el ID del producto digital).
+ *
+ * NOTA: Esta función usa una estrategia de DOS PASOS:
+ * 1. Primero busca el registro digital relacionado con el producto
+ * 2. Luego actualiza ese registro específico por su ID
  */
-const actualizarProductoDigitalPorProductoId = async (
-  productoId,
-  tamanoDescarga,
-) => {
-  // Usamos updateMany() porque puede haber múltiples registros de productos_digitales
-  // para el mismo producto (aunque en este caso probablemente solo haya uno)
-  // where: { producto_id: Number(productoId) } busca todos los registros relacionados
+const actualizarProductoDigital = async (id, tamanoDescarga) => {
+  // PASO 1: Buscamos el primer registro de productos_digitales relacionado con este producto
+  // findFirst() busca el primer registro que cumpla la condición
+  // where: { producto_id: Number(id) } filtra por el ID del producto
+  // orderBy: { id: "asc" } ordena por ID ascendente (aunque probablemente solo haya uno)
+  const productoDigital = await prisma.productos_digitales.findFirst({
+    where: { producto_id: Number(id) },
+    orderBy: { id: "asc" },
+  });
+
+  // Si no existe un registro digital para este producto, retornamos null
+  if (!productoDigital) return null;
+
+  // PASO 2: Actualizamos el registro digital que encontramos
+  // Usamos el ID específico del registro digital (no el ID del producto)
   // data: { tamano_descarga_mb: Number(tamanoDescarga) } actualiza el tamaño
-  const productoDigitalActualizado =
-    await prisma.productos_digitales.updateMany({
-      where: { producto_id: Number(productoId) },
-      data: {
-        tamano_descarga_mb: Number(tamanoDescarga),
-      },
-    });
-  // Retornamos el resultado de la actualización
-  return productoDigitalActualizado;
+  return prisma.productos_digitales.update({
+    where: { id: productoDigital.id },
+    data: {
+      tamano_descarga_mb: Number(tamanoDescarga),
+    },
+  });
 };
 
 /**
@@ -174,68 +270,37 @@ const borrarProducto = async (id) => {
 };
 
 /**
- * FUNCIÓN: insertarProducto
+ * FUNCIÓN: cerrar
  *
- * Crea un nuevo producto FÍSICO en la base de datos.
- * Recibe un objeto con nombre, precio y stock.
+ * Desconecta el cliente de Prisma de la base de datos.
+ * Esto es importante para liberar recursos y cerrar las conexiones correctamente.
+ * Se debe llamar cuando la aplicación se está cerrando o cuando ya no necesitas
+ * hacer más consultas a la base de datos.
  */
-const insertarProducto = async (producto) => {
-  // Extraemos los datos del producto que queremos insertar
-  const { nombre, precio, stock } = producto;
-  // Usamos prisma.productos.create() para insertar un nuevo registro
-  // data: { ... } contiene los valores del nuevo producto
-  // tipo: "FISICO" especifica que es un producto físico (no digital)
-  // new Prisma.Decimal(precio) convierte el precio a tipo Decimal para precisión
-  const productoInsertado = await prisma.productos.create({
-    data: {
-      nombre,
-      precio: new Prisma.Decimal(precio),
-      stock: Number(stock),
-      tipo: "FISICO",
-    },
-  });
-  // Retornamos el producto insertado, normalizando el precio a string
-  return {
-    ...productoInsertado,
-    precio: productoInsertado.precio.toString(),
-  };
+const cerrar = async () => {
+  // prisma.$disconnect() cierra todas las conexiones del pool
+  // El $ indica que es un método especial de Prisma (no una tabla)
+  // await espera a que se cierren todas las conexiones antes de continuar
+  await prisma.$disconnect();
 };
 
 /**
- * FUNCIÓN: insertarProductoDigital
+ * EXPORTAMOS TODAS LAS FUNCIONES
  *
- * Crea un nuevo producto DIGITAL en la base de datos.
- * Este es más complejo que insertarProducto porque crea dos registros:
- * 1. Un registro en la tabla "productos"
- * 2. Un registro relacionado en la tabla "productos_digitales"
+ * Estas funciones se exportan como un objeto para que otros archivos
+ * puedan importarlas y usarlas. Por ejemplo:
+ * const { obtenerTodos, insertarProducto } = require("./ProductosORM");
+ *
+ * Cada función es una operación CRUD (Create, Read, Update, Delete) o de gestión
+ * de la conexión con la base de datos usando Prisma.
  */
-const insertarProductoDigital = async (productoDigital) => {
-  // Extraemos los datos del producto digital que queremos insertar
-  const { nombre, precio, stock, tamanoDescarga } = productoDigital;
-  // Usamos prisma.productos.create() para insertar un nuevo producto
-  // Pero esta vez, además de los datos básicos, también creamos el registro relacionado
-  const productoDigitalInsertado = await prisma.productos.create({
-    data: {
-      nombre,
-      precio: new Prisma.Decimal(precio),
-      stock: Number(stock),
-      tipo: "DIGITAL", // Especificamos que es un producto digital
-      // productos_digitales: { create: [...] } crea un registro relacionado
-      // Es como decir: "Crea este producto Y también crea su información digital"
-      productos_digitales: {
-        create: [
-          {
-            tamano_descarga_mb: Number(tamanoDescarga),
-          },
-        ],
-      },
-    },
-    // include: { productos_digitales: true } hace que Prisma retorne también
-    // los datos del producto digital que acabamos de crear
-    include: {
-      productos_digitales: true,
-    },
-  });
-  // Normalizamos el producto digital y lo retornamos
-  return normalizarProducto(productoDigitalInsertado);
+module.exports = {
+  insertarProducto,
+  insertarProductoDigital,
+  obtenerTodos,
+  obtenerProductoPorId,
+  actualizarProducto,
+  actualizarProductoDigital,
+  borrarProducto,
+  cerrar,
 };

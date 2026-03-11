@@ -1,4 +1,12 @@
 // ---------------------------
+// CARGAR VARIABLES DE ENTORNO
+// ---------------------------
+// require("dotenv").config() carga las variables del archivo .env en process.env
+// Esto es NECESARIO para que ProductosRepo.js pueda leer process.env.DATA_LAYER
+// Sin esta línea, las variables de entorno no estarían disponibles y siempre usaría DAO
+require("dotenv").config();
+
+// ---------------------------
 // IMPORTACIONES
 // ---------------------------
 // Express: Framework web para Node.js que facilita la creación de servidores y APIs
@@ -124,7 +132,7 @@ app.post("/productos/:id/editar", async (req, res) => {
     // Obtenemos el ID del producto a actualizar
     const id = Number(req.params.id);
     // Extraemos los nuevos datos del formulario
-    const { nombre, precio, stock } = req.body;
+    const { nombre, precio, stock, tamanoDescarga } = req.body;
     // Actualizamos el producto en la base de datos con los nuevos valores
     // await pDAO.actualizarProducto(id, {
     await repo.actualizarProducto(id, {
@@ -132,6 +140,11 @@ app.post("/productos/:id/editar", async (req, res) => {
       precio: Number(precio),
       stock: Number(stock),
     });
+    // Si viene tamanoDescarga en el formulario, también actualizamos el tamaño de descarga
+    // Esto solo ocurre si el producto es digital
+    if (tamanoDescarga) {
+      await repo.actualizarProductoDigital(id, tamanoDescarga);
+    }
     // Redirigimos al listado para ver los cambios aplicados
     res.redirect("/productos");
   } catch (error) {

@@ -38,10 +38,16 @@
     <strong>Tipo:</strong> <%= producto.tipo %>
   </p>
 
-  <% if (producto.tamano_descarga_mb) { %>
+  <% if (producto.tipo === 'DIGITAL') { %>
     <p>
-      <strong>Tamaño descarga (MB):</strong>
-      <%= producto.tamano_descarga_mb %>
+      <label for="tamanoDescarga">Tamaño descarga (MB):</label><br>
+      <input
+        type="number"
+        id="tamanoDescarga"
+        name="tamanoDescarga"
+        step="0.01"
+        value="<%= producto.tamano_descarga_mb %>"
+      >
     </p>
   <% } %>
 

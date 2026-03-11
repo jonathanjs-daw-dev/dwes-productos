@@ -9,6 +9,4 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
-const DATABASE_URL = "postgresql://admin:12345@localhost:5432/productos";
-
 module.exports = pool;

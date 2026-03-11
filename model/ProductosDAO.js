@@ -203,7 +203,17 @@ const borrarProducto = async (id) => {
   );
 };
 
-// TODO: Implementar función para borrar producto digital específicamente
+/**
+ * FUNCIÓN: cerrar
+ *
+ * Cierra la conexión del pool con la base de datos.
+ * Esto es importante para liberar recursos cuando la aplicación se está cerrando.
+ */
+const cerrar = async () => {
+  // pool.end() cierra todas las conexiones del pool
+  // await espera a que se cierren todas las conexiones antes de continuar
+  await pool.end();
+};
 
 /**
  * EXPORTAMOS TODAS LAS FUNCIONES
@@ -220,4 +230,5 @@ module.exports = {
   actualizarProducto,
   actualizarProductoDigital,
   borrarProducto,
+  cerrar,
 };
